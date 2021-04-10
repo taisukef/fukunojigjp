@@ -241,15 +241,15 @@ const makeThumnail = body => {
     if (m2 >= 0) {
       return b2.substring(m + 5, m2);
     }
-    d.img = b2.substring(m + 5);
+    return b2.substring(m + 5);
   }
   return null;
 };
 
 const decodeXML = s => {
-  s = s.replace(/&amp;/g, "&");
   s = s.replace(/&gt;/g, ">");
   s = s.replace(/&lt;/g, "<");
+  s = s.replace(/&amp;/g, "&");
   return s;
 };
 const xml2json = sxml => {

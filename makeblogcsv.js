@@ -119,9 +119,8 @@ const csv2rssxml = async () => {
     const xml = s.join("\n");
     console.log(xml);
     Deno.writeTextFileSync("../rss.xml", xml);
+    console.log(list.length);
 };
 
-dir2csv();
-csv2rssxml();
-
-
+await dir2csv();
+await csv2rssxml();
