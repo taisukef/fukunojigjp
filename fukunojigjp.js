@@ -1,4 +1,3 @@
-import { createApp } from "https://servestjs.org/@v1.1.9/mod.ts";
 import { CONTENT_TYPE } from "https://js.sabae.cc/CONTENT_TYPE.js";
 import { fix0 } from "https://js.sabae.cc/fix0.js";
 import { CSV } from "https://js.sabae.cc/CSV.js";
@@ -110,7 +109,7 @@ const readFileSyncCore = (fn, req) => {
     const d = Deno.readFileSync("../" + fn);
     return d;
   } catch (e) {
-    console.log(e);
+    //console.log(e);
   }
   return "not found";
 };
@@ -273,9 +272,10 @@ const xml2json = sxml => {
 
 class Server {
   constructor(port) {
-    const app = createApp();
-
-    app.handle(/\/*/, async (req) => {
+    this.start(port);
+  }
+  async start(port) {
+    const handle = async (path, req) => {
       try {
         const getRange = (req) => {
           const range = req.headers.get("Range");
@@ -289,9 +289,7 @@ class Server {
           return res;
         };
         const range = getRange(req);
-        const fn = req.path === "/" || req.path.indexOf("..") >= 0
-          ? "/index.html"
-          : req.path;
+        const fn = path === "/" || path.indexOf("..") >= 0 ? "/index.html" : path;
         const n = fn.lastIndexOf(".");
         const ext = n < 0 ? "html" : fn.substring(n + 1);
         const readFileSync = (fn, range, req) => {
@@ -320,22 +318,30 @@ class Server {
           headers["Content-Range"] = "bytes " + range[0] + "-" + range[1] +
             "/" + totallen;
         }
-        await req.respond({
+        return new Response(data, {
           status: range ? 206 : 200,
-          headers: new Headers(headers),
-          body: data,
+          headers: new Headers(headers)
         });
       } catch (e) {
-        if (req.path !== "/favicon.ico") {
-          console.log("err", req.path, e.stack);
+        if (path !== "/favicon.ico") {
+          console.log("err", path, e.stack);
         }
       }
-    });
+    };
 
     const hostname = "::";
-    app.listen({ port, hostname });
-
     console.log(`http://localhost:${port}/`);
+    for await (const conn of Deno.listen({ port, hostname })) {
+      (async () => {
+        for await (const res of Deno.serveHttp(conn)) {
+          const req = res.request;
+          const url = req.url;
+          const path = url.indexOf("?") < 0 ? url : url.substring(0, url.indexOf("?"));
+          const resd = handle(path, req);
+          res.respondWith(resd);
+        }
+      })();
+    }
   }
 }
 
